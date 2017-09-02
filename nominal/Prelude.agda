@@ -15,6 +15,9 @@ _F≟_ : {n : ℕ} → has-dec-eq (Fin n)
 BAut : ∀ {i} → Type i → Type (lsucc i)
 BAut {i} A = Σ (Type i) λ X → Trunc -1 (A == X)
 
+BAut-prop : ∀ {i} (A : Type i) → SubtypeProp (Type i) (lsucc i)
+BAut-prop A = ((λ X → Trunc -1 (A == X)) , (λ X → Trunc-level))
+
 pBAut : ∀ {i} → Type i → Ptd (lsucc i)
 de⊙ (pBAut A) = BAut A
 pt (pBAut A) = A , [ idp ]
@@ -151,3 +154,10 @@ has-dec-eq-Coprod A B dA dB (inr b)  (inl a)  = inr λ { () }
 has-dec-eq-Coprod A B dA dB (inr b₁) (inr b₂) with dB b₁ b₂
 has-dec-eq-Coprod A B dA dB (inr b₁) (inr b₂) | inl p = inl (ap inr p)
 has-dec-eq-Coprod A B dA dB (inr b₁) (inr b₂) | inr ¬p = inr λ { idp → ¬p idp }
+
+module _ {i j k} {A : Type i} {B : Type j} (P : A → SubtypeProp B k) where
+
+  ↓-Subtype-cst-in : {x x' : A} {p : x == x'} {u : Subtype (P x)} {u' : Subtype (P x')}
+           → fst u == fst u'
+           → u == u' [ Subtype ∘ P ↓ p ]
+  ↓-Subtype-cst-in {x} {.x} {idp} {b , p} {.b , p'} idp = Subtype=-out (P x) idp

@@ -89,7 +89,7 @@ pigeonhole-special {S n} f | inr h = incl ltS i , incl ltS j , (λ q → i≠j (
     p = snd (snd (snd (pigeonhole-special g)))
 
 pigeonhole : ∀ {m n} (m<n : m < n) (f : Fin n → Fin m)
-             → Σ (Fin n) λ i → Σ (Fin n) λ j → (i == j → ⊥) × (f i == f j)
+             → Σ (Fin n) λ i → Σ (Fin n) λ j → (i ≠ j) × (f i == f j)
 pigeonhole {m} {.(S m)} ltS f = pigeonhole-special f
 pigeonhole {m} {(S n)} (ltSR p) f = i , j , ¬q , Subtype=-out (Fin-prop m) (ap fst r)
   where
