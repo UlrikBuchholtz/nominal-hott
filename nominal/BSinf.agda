@@ -10,61 +10,6 @@ module BSinf where
 -- and a type of atoms, A, with decidable equality
 -- (this will go in a separate file / be merged with Lambda)
 
-module Lambda {ℓ} {I : Set ℓ} (S : I → I)
-  (A : I → Set lzero) (_A≟_ : {i : I} → has-dec-eq (A i)) where
-
-  data Λ : I → Set ℓ where
-    var : {i : I} → A i → Λ i
-    app : {i : I} → Λ i → Λ i → Λ i
-    lam : {i : I} → Λ (S i) → Λ i
-
-  Λ-var-is-inj : {i : I} → {x y : A i} → var x == var y → x == y
-  Λ-var-is-inj idp = idp
-
-  Λ-app-is-inj₁ : {i : I} → {s₁ s₂ t₁ t₂ : Λ i} → app s₁ s₂ == app t₁ t₂ → s₁ == t₁
-  Λ-app-is-inj₁ idp = idp
-
-  Λ-app-is-inj₂ : {i : I} → {s₁ s₂ t₁ t₂ : Λ i} → app s₁ s₂ == app t₁ t₂ → s₂ == t₂
-  Λ-app-is-inj₂ idp = idp
-
-  Λ-lam-is-inj : {i : I} → {s t : Λ (S i)} → lam s == lam t → s == t
-  Λ-lam-is-inj idp = idp
-
-  Λ-var-is-not-app : {i : I} → {x : A i} → {s t : Λ i}
-                     → var x == app s t → ⊥
-  Λ-var-is-not-app ()
-
-  Λ-var-is-not-lam : {i : I} → {x : A i} → {s : Λ (S i)}
-                     → var x == lam s → ⊥
-  Λ-var-is-not-lam ()
-
-  Λ-app-is-not-lam : {i : I} → {s t : Λ i} → {u : Λ (S i)}
-                     → app s t == lam u → ⊥
-  Λ-app-is-not-lam ()
-
-  _≟_ : {i : I} → has-dec-eq (Λ i)
-  var x ≟ var y with x A≟ y
-  var x ≟ var y | inl p = inl (ap var p)
-  var x ≟ var y | inr ¬p = inr λ q → ¬p (Λ-var-is-inj q)
-  var x ≟ app t₁ t₂ = inr Λ-var-is-not-app
-  var x ≟ lam t = inr Λ-var-is-not-lam
-  app s₁ s₂ ≟ var y = inr λ q → Λ-var-is-not-app (! q)
-  app s₁ s₂ ≟ app t₁ t₂ with s₁ ≟ t₁
-  app s₁ s₂ ≟ app t₁ t₂ | inl p with s₂ ≟ t₂
-  app s₁ s₂ ≟ app t₁ t₂ | inl p | inl q = inl (ap2 app p q)
-  app s₁ s₂ ≟ app t₁ t₂ | inl p | inr ¬q = inr λ r → ¬q (Λ-app-is-inj₂ r)
-  app s₁ s₂ ≟ app t₁ t₂ | inr ¬p = inr λ q → ¬p (Λ-app-is-inj₁ q)
-  app s₁ s₂ ≟ lam t = inr Λ-app-is-not-lam
-  lam s ≟ var y = inr λ q → Λ-var-is-not-lam (! q)
-  lam s ≟ app t₁ t₂ = inr λ q → Λ-app-is-not-lam (! q)
-  lam s ≟ lam t with s ≟ t
-  lam s ≟ lam t | inl p = inl (ap lam p)
-  lam s ≟ lam t | inr ¬p = inr λ q → ¬p (Λ-lam-is-inj q)
-
--- now let us instantiate this with the de Bruijn indices
-
-module ΛdB = Lambda S Fin _F≟_
-
 -- now let us instantiate this with the finitary symmetric group
 
 BΣ∞ : Set₁
@@ -87,20 +32,42 @@ shift = ℕColimRec.f add-unit (λ n X → i (unit-add n X)) lemma
   where
     lemma : (n : ℕ) → (X : BAut (Fin n)) → i (unit-add n X) == i (unit-add (S n) (add-unit n X))
     lemma n X = g (unit-add n X) ∙ ap i (add-unit-add X)
-    
-atoms : BΣ∞ → Type₀
-atoms = ℕColimRec.f add-unit (λ n X → fst X ⊔ ℕ) lemma
+
+add-unit-fin : (n : ℕ) → {m : ℕ} → (X : BAut (Fin m))
+               → add-unit (n +' m) (fin-add n m X) == fin-add n (S m) (add-unit m X)
+add-unit-fin n {m} (X , tp) = pair= (! (Coprod-assoc (Fin n) X ⊤))
+                                    ((from-transp _ _ (prop-has-all-paths Trunc-level _ _)))
+
+fin-shift : ℕ → BΣ∞ → BΣ∞
+fin-shift n = ℕColimRec.f add-unit (λ m X → i (fin-add n m X)) lemma
+  where
+    lemma : (m : ℕ) → (X : BAut (Fin m)) → i (fin-add n m X) == i (fin-add n (S m) (add-unit m X))
+    lemma m X = g (fin-add n m X) ∙ ap i (add-unit-fin n X)
+
+fin-shift' : ℕ → BΣ∞ → BΣ∞
+fin-shift' O X = X
+fin-shift' (S n) X = shift (fin-shift' n X)
+
+Atom : BΣ∞ → Type₀
+Atom = ℕColimRec.f add-unit (λ n X → fst X ⊔ ℕ) lemma
   where
     lemma : (n : ℕ) → (X : BAut (Fin n)) → fst X ⊔ ℕ == fst (add-unit n X) ⊔ ℕ
     lemma n (X , tp) = ap (λ A → X ⊔ A) ℕ-eq-⊤-⊔-ℕ ∙ Coprod-assoc X ⊤ ℕ
 
 has-dec-eq-prop : (x : BΣ∞) → hProp lzero
-fst (has-dec-eq-prop x) = has-dec-eq (atoms x)
-snd (has-dec-eq-prop x) = is-prop-has-dec-eq (atoms x)
+fst (has-dec-eq-prop x) = has-dec-eq (Atom x)
+snd (has-dec-eq-prop x) = is-prop-has-dec-eq (Atom x)
 
-_A≟_ : {x : BΣ∞} → has-dec-eq (atoms x)
-_A≟_ {x} = prop-over-connected {lsucc lzero} {lzero} {BΣ∞} {i ( Fin O , [ idp ] )}
+Atom-has-dec-eq : {x : BΣ∞} → has-dec-eq (Atom x)
+Atom-has-dec-eq {x} = prop-over-connected {lone} {lzero} {BΣ∞} {i ( Fin O , [ idp ] )}
            BΣ∞-conn has-dec-eq-prop (has-dec-eq-Coprod (Fin O) ℕ (_F≟_ {O}) ℕ-has-dec-eq) x
+
+swap : {X : BΣ∞} → (a b : Atom X) → X == X
+swap {X} = ℕColim-elim add-unit (λ n A → {!!}) {!!} X
+
+-- better interface using i : FinSet → BΣ∞, g : (A : FinSet) → i A == i (A ⊔ ⊤)?
+-- hiding all numbers in prop.trunc.?
+-- i A == i (Fin O ⊔ A) is just ap i (ua ...) instead of something uglier
 
 --fs : ∀ {u} {X : BΣ∞ → hSet u} {B : BΣ∞} (x : fst (X B)) → hProp u
 --fst (fs x) = Trunc (from-neg 1) (Σ ℕ λ n → {!!})

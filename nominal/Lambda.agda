@@ -5,6 +5,61 @@ open import Prelude
 
 module Lambda where
 
+module LambdaGeneric {ℓ} {I : Set ℓ} (S : I → I)
+  (A : I → Set lzero) (_A≟_ : {i : I} → has-dec-eq (A i)) where
+
+  data Λ : I → Set ℓ where
+    var : {i : I} → A i → Λ i
+    app : {i : I} → Λ i → Λ i → Λ i
+    lam : {i : I} → Λ (S i) → Λ i
+
+  Λ-var-is-inj : {i : I} → {x y : A i} → var x == var y → x == y
+  Λ-var-is-inj idp = idp
+
+  Λ-app-is-inj₁ : {i : I} → {s₁ s₂ t₁ t₂ : Λ i} → app s₁ s₂ == app t₁ t₂ → s₁ == t₁
+  Λ-app-is-inj₁ idp = idp
+
+  Λ-app-is-inj₂ : {i : I} → {s₁ s₂ t₁ t₂ : Λ i} → app s₁ s₂ == app t₁ t₂ → s₂ == t₂
+  Λ-app-is-inj₂ idp = idp
+
+  Λ-lam-is-inj : {i : I} → {s t : Λ (S i)} → lam s == lam t → s == t
+  Λ-lam-is-inj idp = idp
+
+  Λ-var-is-not-app : {i : I} → {x : A i} → {s t : Λ i}
+                     → var x == app s t → ⊥
+  Λ-var-is-not-app ()
+
+  Λ-var-is-not-lam : {i : I} → {x : A i} → {s : Λ (S i)}
+                     → var x == lam s → ⊥
+  Λ-var-is-not-lam ()
+
+  Λ-app-is-not-lam : {i : I} → {s t : Λ i} → {u : Λ (S i)}
+                     → app s t == lam u → ⊥
+  Λ-app-is-not-lam ()
+
+  _≟_ : {i : I} → has-dec-eq (Λ i)
+  var x ≟ var y with x A≟ y
+  var x ≟ var y | inl p = inl (ap var p)
+  var x ≟ var y | inr ¬p = inr λ q → ¬p (Λ-var-is-inj q)
+  var x ≟ app t₁ t₂ = inr Λ-var-is-not-app
+  var x ≟ lam t = inr Λ-var-is-not-lam
+  app s₁ s₂ ≟ var y = inr λ q → Λ-var-is-not-app (! q)
+  app s₁ s₂ ≟ app t₁ t₂ with s₁ ≟ t₁
+  app s₁ s₂ ≟ app t₁ t₂ | inl p with s₂ ≟ t₂
+  app s₁ s₂ ≟ app t₁ t₂ | inl p | inl q = inl (ap2 app p q)
+  app s₁ s₂ ≟ app t₁ t₂ | inl p | inr ¬q = inr λ r → ¬q (Λ-app-is-inj₂ r)
+  app s₁ s₂ ≟ app t₁ t₂ | inr ¬p = inr λ q → ¬p (Λ-app-is-inj₁ q)
+  app s₁ s₂ ≟ lam t = inr Λ-app-is-not-lam
+  lam s ≟ var y = inr λ q → Λ-var-is-not-lam (! q)
+  lam s ≟ app t₁ t₂ = inr λ q → Λ-app-is-not-lam (! q)
+  lam s ≟ lam t with s ≟ t
+  lam s ≟ lam t | inl p = inl (ap lam p)
+  lam s ≟ lam t | inr ¬p = inr λ q → ¬p (Λ-lam-is-inj q)
+
+-- now let us instantiate this with the de Bruijn indices
+
+module ΛdB = Lambda S Fin _F≟_
+
 -- simply typed lambda-calculus
 -- parametrized by index type
 
@@ -24,6 +79,11 @@ module MΛ {u} {I : Type u} (S : I → I) (A : I → Type₀)
     lam : {i : I} → Λ (S i) → Λ i
   open Λ public
 
+  sub : (i : I) → Λ (S i) → Λ i → Λ i
+  sub i (var x) t = {!!}
+  sub i (app s s') t = app (sub i s t) (sub i s' t)
+  sub i (lam s) t = lam (sub (S i) s {!!})
+  
   absA : {i : I} → A i → A i → A (S i)
   absA a b with a A≟ b
   absA a b | inl _ = newA

@@ -4,6 +4,9 @@ open import HoTT
 
 module Prelude where
 
+lone : ULevel
+lone = lsucc lzero
+
 _F≟_ : {n : ℕ} → has-dec-eq (Fin n)
 (k , k<n) F≟ (l , l<n) with ℕ-has-dec-eq k l
 (k , k<n) F≟ (l , l<n) | inl p = inl (pair= p (from-transp _ p (<-has-all-paths _ _)))
@@ -25,24 +28,28 @@ snd (BAut-conn A) = Trunc-elim (λ x → raise-level (from-nat 0) Trunc-level [ 
                                (λ { (X , tp) → <– (Trunc=-equiv [ A , [ idp ] ] [ X , tp ])
                                                   (BAut-trunc-path A X tp) })
 
-Fin-S-eq : (n : ℕ) → Fin (S n) == Fin n ⊔ ⊤
-Fin-S-eq n = ua (equiv to from to-from from-to)
+Coprod-empty-eq : ∀ {i} (A : Type i) → ⊥ ⊔ A == A
+Coprod-empty-eq {i} (A) = ua (equiv to from to-from from-to)
   where
-    to : Fin (S n) → Fin n ⊔ ⊤
-    to (_ , ltS) = inr unit
-    to (k , ltSR k<n) = inl (k , k<n)
-    
-    from : Fin n ⊔ ⊤ → Fin (S n)
-    from (inl (k , k<n)) = k , ltSR k<n
-    from (inr x) = n , ltS
+    to : ⊥ ⊔ A → A
+    to (inl ())
+    to (inr a) = a
 
-    to-from : (x : Fin n ⊔ ⊤) → to (from x) == x
-    to-from (inl (k , k<n)) = idp
-    to-from (inr unit) = idp
+    from : A → ⊥ ⊔ A
+    from a = inr a
 
-    from-to : (x : Fin (S n)) → from (to x) == x
-    from-to (_ , ltS) = idp
-    from-to (k , ltSR k<n) = idp
+    to-from : (a : A) → to (from a) == a
+    to-from a = idp
+
+    from-to : (x : ⊥ ⊔ A) → from (to x) == x
+    from-to (inl ())
+    from-to (inr a) = idp
+
+Fin-O-eq : Fin O == ⊥
+Fin-O-eq = ua Fin-equiv-Empty
+
+Fin-S-eq : (n : ℕ) → Fin (S n) == Fin n ⊔ ⊤
+Fin-S-eq n = ua Fin-equiv-Coprod
 
 ℕ-eq-⊤-⊔-ℕ : ℕ == ⊤ ⊔ ℕ
 ℕ-eq-⊤-⊔-ℕ = ua (equiv to from to-from from-to)
@@ -102,6 +109,25 @@ Coprod-assoc A B C = ua (equiv to from to-from from-to)
     
 unit-add : (n : ℕ) → BAut (Fin n) → BAut (Fin (S n))
 unit-add n (X , tp) = ⊤ ⊔ X , Trunc-rec Trunc-level (λ p → [ Fin-S-eq n ∙ ap (λ A → A ⊔ ⊤) p ∙ Coprod-comm X ⊤ ]) tp
+
+infixl 80 _+'_
+
+-- we need the version of addition defined by recursion on the second argument
+_+'_ : ℕ → ℕ → ℕ
+n +' O = n
+n +' S m = S (n +' m)
+
+Fin-add-eq : (n m : ℕ) → Fin (n +' m) == Fin n ⊔ Fin m
+Fin-add-eq n O = ! (Coprod-comm (Fin n) (Fin O) ∙ ap (λ A → A ⊔ Fin n) Fin-O-eq ∙ Coprod-empty-eq (Fin n))
+Fin-add-eq n (S m) =
+  Fin (n +' S m)      =⟨ Fin-S-eq (n +' m) ⟩ 
+  Fin (n +' m) ⊔ ⊤    =⟨ ap (λ A → A ⊔ ⊤) (Fin-add-eq n m) ⟩
+  (Fin n ⊔ Fin m) ⊔ ⊤ =⟨ ! (Coprod-assoc (Fin n) (Fin m) ⊤) ⟩
+  Fin n ⊔ (Fin m ⊔ ⊤) =⟨ ap (λ A → Fin n ⊔ A) (! (Fin-S-eq m)) ⟩
+  Fin n ⊔ Fin (S m)   ∎
+  
+fin-add : (n m : ℕ) → BAut (Fin m) → BAut (Fin (n +' m))
+fin-add n m (Y , tq) = Fin n ⊔ Y , Trunc-rec Trunc-level (λ q → [ Fin-add-eq n m ∙ ap (λ A → Fin n ⊔ A) q ]) tq
 
 is-prop-not : (A : Type₀) → is-prop (¬ A)
 is-prop-not A = all-paths-is-prop λ f g → λ= λ a → ⊥-rec (f a)

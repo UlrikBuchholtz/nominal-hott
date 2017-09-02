@@ -1,3 +1,3 @@
 name: nominal-hott
-depend: hott-core
+depend: hott-core hott-theorems
 include: nominal
