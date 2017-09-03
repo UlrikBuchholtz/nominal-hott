@@ -2,6 +2,7 @@
 
 open import HoTT
 open import Prelude
+open import FinSet
 
 module BSinf where
 
@@ -18,12 +19,32 @@ BΣ∞ = ℕColim add-unit
 BΣ∞-conn : is-connected 0 BΣ∞
 BΣ∞-conn = ncolim-conn add-unit (from-nat 0) λ n → BAut-conn (Fin n)
 
-i : {n : ℕ} → BAut (Fin n) → BΣ∞
-i {n} X = ncin n X
+-- explicit constructors
+i-exp : FinSet-exp → BΣ∞
+i-exp (n , A) = ncin n A
 
-g : {n : ℕ} → (X : BAut (Fin n)) → i X == i (add-unit n X)
-g {n} X = ncglue n X
+g-exp : (A : FinSet-exp) → i-exp A == i-exp (S (fst A) , add-unit (fst A) (snd A))
+g-exp (n , A) = ncglue n A
 
+-- implicit constructors
+i : FinSet → BΣ∞
+i A = i-exp (<– FinSet-equiv A)
+
+g : (A : FinSet) → i A == i (A ⊎ Unit-FinSet)
+g A = g-exp (<– FinSet-equiv A) ∙ ap i-exp (<– (ap-equiv FinSet-equiv _ _) (Subtype=-out FinSet-prop idp))
+
+BΣ∞-elim : ∀ {ℓ} {P : BΣ∞ → Type ℓ} (Pi : (A : FinSet) → P (i A))
+           (Pg : (A : FinSet) → Pi A == Pi (A ⊎ Unit-FinSet) [ P ↓ g A ])
+           (X : BΣ∞) → P X
+BΣ∞-elim {ℓ} {P} Pi Pg X = ℕColimElim.f add-unit {P = P}
+  (λ n A → transport (P ∘ i-exp) (<–-inv-l FinSet-equiv ((n , A))) (Pi (–> FinSet-equiv (n , A))))
+  (λ n A → {!!}) X
+
+BΣ∞-rec : ∀ {ℓ} {P : Type ℓ} (Pi : FinSet → P) (Pg : (A : FinSet) → Pi A == Pi (A ⊎ Unit-FinSet))
+          → BΣ∞ → P
+BΣ∞-rec Pi Pg X = BΣ∞-elim Pi (λ A → ↓-cst-in (Pg A)) X
+
+{-
 add-unit-add : {n : ℕ} → (X : BAut (Fin n)) → add-unit (S n) (unit-add n X) == unit-add (S n) (add-unit n X)
 add-unit-add (X , tp) = pair= (! (Coprod-assoc ⊤ X ⊤)) (from-transp _ _ (prop-has-all-paths Trunc-level _ _))
 
@@ -74,3 +95,4 @@ swap {X} = ℕColim-elim add-unit (λ n A → {!!}) {!!} X
 --snd (fs x) = Trunc-level
 
 -- module ΛNom = Lambda {lsucc lzero} {BΣ∞} shift atoms _A≟_
+-}
