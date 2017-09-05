@@ -18,6 +18,15 @@ FinSet-prop = (λ A → Trunc -1 (Σ ℕ λ n → Fin n == A)) , λ A → Trunc-
 FinSet : Type lone
 FinSet = Subtype FinSet-prop
 
+FinSet= : {A B : FinSet} → fst A == fst B → A == B
+FinSet= = Subtype=-out FinSet-prop
+
+FinFS : ℕ → FinSet
+FinFS n = Fin n , [ n , idp ]
+
+UnitFS : FinSet
+UnitFS = ⊤ , [ S O , ua Fin-equiv-Coprod ∙ ap (λ C → C ⊔ ⊤) (ua Fin-equiv-Empty) ∙ Coprod-empty-eq ⊤ ]
+
 Fin-inj-lemma : {n m : ℕ} → n < m → Fin m == Fin n → ⊥
 Fin-inj-lemma {n} {m} n<m p = i≠j (<– (ap-equiv (coe-equiv p) i j) q)
   where
@@ -59,7 +68,7 @@ card A = fst (FinSet-aux A)
 
 card-eq : (A : FinSet) (n : ℕ) → Trunc -1 (Fin n == fst A) → card A == n
 card-eq (A , tz) n tp = Trunc-rec (ℕ-is-set (card (A , tz)) n) (λ p →
-  ap card (Subtype=-out FinSet-prop {A , tz} {Fin n , [ n , idp ]} (! p)) ) tp
+  ap card (FinSet= {A , tz} {FinFS n} (! p)) ) tp
 
 FinSet-equiv : FinSet-exp ≃ FinSet
 FinSet-equiv = equiv to from to-from from-to
@@ -82,5 +91,9 @@ _⊎_ : FinSet → FinSet → FinSet
   (λ { (n , p) → Trunc-rec Trunc-level
     (λ { (m , q) → [ n +' m , Fin-add-eq n m ∙ ap (λ C → C ⊔ Fin m) p ∙ ap (λ C → A ⊔ C) q ]}) tw}) tz
 
-Unit-FinSet : FinSet
-Unit-FinSet = ⊤ , [ S O , ua Fin-equiv-Coprod ∙ ap (λ C → C ⊔ ⊤) (ua Fin-equiv-Empty) ∙ Coprod-empty-eq ⊤ ]
+FinSet-elim-prop : ∀ {j} {P : FinSet → Type j} (p : (A : FinSet) → has-level -1 (P A))
+                   (d : (n : ℕ) → P (FinFS n)) → (A : FinSet) → P A
+FinSet-elim-prop {j} {P} p d (A , tz) = Trunc-elim (λ tw → p (A , tw)) (λ {(n , p) → transport P (FinSet= p) (d n)}) tz
+
+finset-has-dec-eq : (A : FinSet) → has-dec-eq (fst A)
+finset-has-dec-eq = FinSet-elim-prop (λ A → is-prop-has-dec-eq (fst A)) λ n → Fin-has-dec-eq

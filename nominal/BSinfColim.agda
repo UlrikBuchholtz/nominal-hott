@@ -4,14 +4,9 @@ open import HoTT
 open import Prelude
 open import FinSet
 
-module BSinf where
+module BSinfColim where
 
--- here we define the untyped λ-calculus parametrized by
--- any index type I with a shift operator S,
--- and a type of atoms, A, with decidable equality
--- (this will go in a separate file / be merged with Lambda)
-
--- now let us instantiate this with the finitary symmetric group
+-- the definition of the finitary symmetric group as a sequential colimit
 
 BΣ∞ : Set₁
 BΣ∞ = ℕColim add-unit

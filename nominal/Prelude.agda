@@ -7,10 +7,9 @@ module Prelude where
 lone : ULevel
 lone = lsucc lzero
 
-_F≟_ : {n : ℕ} → has-dec-eq (Fin n)
-(k , k<n) F≟ (l , l<n) with ℕ-has-dec-eq k l
-(k , k<n) F≟ (l , l<n) | inl p = inl (pair= p (from-transp _ p (<-has-all-paths _ _)))
-(k , k<n) F≟ (l , l<n) | inr ¬p = inr λ q → ¬p (ap fst q)
+-- implicit version of transpoart
+_▸_ : ∀ {i j} {A : Type i} {P : A → Type j} {x y : A} → x == y → P x → P y
+e ▸ p = transport _ e p 
 
 BAut : ∀ {i} → Type i → Type (lsucc i)
 BAut {i} A = Σ (Type i) λ X → Trunc -1 (A == X)
